@@ -1,0 +1,542 @@
+<!-- Destiny 2 Distortion Tracker -->
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d1017;
+    --panel:#141926;
+    --panel2:#101522;
+    --line:#232c40;
+    --text:#e8ecf4;
+    --dim:#8b95ad;
+    --red:#ff4655;
+    --red-dim:#7a2530;
+    --gold:#e9c268;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -200px, #1a2236 0%, transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Rajdhani',sans-serif;
+    min-height:100vh;
+    display:flex;justify-content:center;
+    padding:28px 16px 48px;
+  }
+  .wrap{width:100%;max-width:680px}
+  header{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:24px}
+  h1{font-size:20px;font-weight:600;letter-spacing:.28em;text-transform:uppercase}
+  h1 .accent{color:var(--red)}
+  .clock{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--dim)}
+
+  /* ring */
+  .ring-wrap{position:relative;width:320px;height:320px;margin:0 auto 8px}
+  .ring-wrap svg{width:100%;height:100%;overflow:visible}
+  .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+  .eyebrow{font-size:11px;letter-spacing:.35em;text-transform:uppercase;color:var(--red);margin-bottom:6px}
+  .dest-name{font-size:30px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1.05;max-width:210px}
+  .countdown{font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--text);margin-top:10px}
+  .countdown small{font-size:11px;color:var(--dim);display:block;letter-spacing:.2em;text-transform:uppercase;margin-top:2px}
+
+  .next-line{text-align:center;color:var(--dim);font-size:15px;letter-spacing:.08em;margin-bottom:28px}
+  .next-line b{color:var(--text);font-weight:600;text-transform:uppercase}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:16px}
+  .panel h2{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+
+  /* schedule */
+  table{width:100%;border-collapse:collapse;font-size:15px}
+  td{padding:7px 4px;border-bottom:1px solid var(--panel2)}
+  tr:last-child td{border-bottom:none}
+  td.time{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--dim);width:90px}
+  tr.active td{color:var(--red);font-weight:600}
+  tr.active td.time{color:var(--red)}
+  td .diamond{display:inline-block;width:7px;height:7px;transform:rotate(45deg);background:var(--line);margin-right:10px;vertical-align:1px}
+  tr.active td .diamond{background:var(--red);box-shadow:0 0 8px var(--red)}
+
+  /* calibrate + notify */
+  .btn-row{display:flex;flex-wrap:wrap;gap:8px}
+  button{
+    font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;
+    padding:8px 14px;cursor:pointer;transition:border-color .15s,color .15s;
+  }
+  button:hover{border-color:var(--red);color:var(--red)}
+  button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  button.selected{border-color:var(--red);color:var(--red);background:rgba(255,70,85,.08)}
+  button.primary{border-color:var(--gold);color:var(--gold)}
+  button.primary:hover{background:rgba(233,194,104,.08)}
+  .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+  select{
+    font-family:'Rajdhani',sans-serif;font-size:14px;background:var(--panel2);color:var(--text);
+    border:1px solid var(--line);border-radius:4px;padding:7px 10px;
+  }
+  .status{font-size:14px;color:var(--dim)}
+  .status.ok{color:var(--gold)}
+  .status.warn{color:var(--red)}
+  .note{font-size:13px;color:var(--dim);margin-top:10px;line-height:1.5}
+
+  @media (prefers-reduced-motion:no-preference){
+    .pulse{animation:pulse 3s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+  }
+
+  /* loot accordion */
+  .loot-item{border-bottom:1px solid var(--panel2)}
+  .loot-item:last-child{border-bottom:none}
+  .loot-head{
+    width:100%;display:flex;justify-content:space-between;align-items:center;
+    background:none;border:none;padding:12px 4px;cursor:pointer;
+    font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--text);
+  }
+  .loot-head:hover{color:var(--red)}
+  .loot-head .set-name{font-size:12px;color:var(--dim);letter-spacing:.15em;font-weight:500}
+  .loot-item.live .loot-head{color:var(--red)}
+  .loot-body{display:none;padding:0 4px 16px}
+  .loot-item.open .loot-body{display:block}
+  .bonus{margin-bottom:10px;font-size:14.5px;line-height:1.5;color:var(--text)}
+  .bonus b{color:var(--gold);font-weight:600;letter-spacing:.05em}
+  .bonus .pc{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);margin-right:6px}
+  .wpn-title{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin:14px 0 8px}
+  .wpn{display:flex;justify-content:space-between;font-size:14.5px;padding:4px 0;border-bottom:1px solid rgba(35,44,64,.5)}
+  .wpn:last-child{border-bottom:none}
+  .wpn .type{color:var(--dim);font-size:13px}
+  .wpn .new{color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:8px;letter-spacing:.1em}
+
+  /* subclass keyword colors */
+  .kw-solar{color:#ff7e21;font-weight:600}
+  .kw-arc{color:#7bc8f5;font-weight:600}
+  .kw-void{color:#b185df;font-weight:600}
+  .kw-stasis{color:#4d7dff;font-weight:600}
+  .kw-strand{color:#3be36e;font-weight:600}
+  .kw-kinetic{color:#f6f7f9;font-weight:600}
+
+  /* element icons */
+  .el-ic{width:14px;height:14px;vertical-align:-2px;margin-right:6px}
+
+  /* armor slot tracker */
+  .armor-title{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin:14px 0 8px}
+  .armor-row{display:flex;gap:10px}
+  .slot{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;
+    background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+    padding:10px 4px 8px;cursor:pointer;transition:border-color .15s;
+  }
+  .slot:hover{border-color:var(--gold)}
+  .slot svg{width:26px;height:26px;stroke:var(--dim);fill:none;stroke-width:1.6;transition:stroke .15s,filter .15s}
+  .slot .slot-name{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+  .slot .slot-state{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--dim)}
+  .slot.owned{border-color:var(--gold);background:rgba(233,194,104,.06)}
+  .slot.owned svg{stroke:var(--gold);filter:drop-shadow(0 0 4px rgba(233,194,104,.6))}
+  .slot.owned .slot-name{color:var(--gold)}
+  .slot.owned .slot-state{color:var(--gold)}
+  @media (max-width:420px){
+    .ring-wrap{width:260px;height:260px}
+    .dest-name{font-size:24px}
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Distortion <span class="accent">Tracker</span></h1>
+    <div class="clock" id="clock">--:--:--</div>
+  </header>
+
+  <div class="ring-wrap">
+    <svg viewBox="0 0 320 320" aria-hidden="true">
+      <defs>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <circle cx="160" cy="160" r="140" fill="none" stroke="#232c40" stroke-width="2"/>
+      <circle id="progress" cx="160" cy="160" r="140" fill="none" stroke="#ff4655" stroke-width="3"
+              stroke-linecap="round" filter="url(#glow)" class="pulse"
+              stroke-dasharray="879.6" stroke-dashoffset="879.6"
+              transform="rotate(-90 160 160)"/>
+      <g id="nodes"></g>
+    </svg>
+    <div class="ring-center">
+      <div class="eyebrow">Distorted Now</div>
+      <div class="dest-name" id="current">—</div>
+      <div class="countdown"><span id="timer">--:--</span><small>until shift</small></div>
+    </div>
+  </div>
+
+  <div class="next-line">Up next: <b id="next">—</b> <span id="nextTime"></span></div>
+
+  <div class="panel" id="calPanel">
+    <h2>Calibrate</h2>
+    <div class="note" style="margin:0 0 12px">Check your Director in-game and tap whichever destination is distorted right now. One tap — the rest of the rotation is computed from it.</div>
+    <div class="btn-row" id="calButtons"></div>
+    <div class="row"><span class="status" id="calStatus">Not calibrated — schedule below is a guess.</span></div>
+  </div>
+
+  <div class="panel">
+    <h2>Notifications</h2>
+    <div class="row">
+      <button class="primary" id="enableNotif">Enable notifications</button>
+      <label class="status">Warn me
+        <select id="lead">
+          <option value="1">1 min</option>
+          <option value="2">2 min</option>
+          <option value="5">5 min</option>
+          <option value="10" selected>10 min</option>
+          <option value="15">15 min</option>
+        </select>
+        before the shift
+      </label>
+    </div>
+    <div class="row"><span class="status" id="notifStatus">Notifications off.</span></div>
+    <h2 style="margin-top:18px">Farm filter</h2>
+    <div class="note" style="margin:0 0 12px">Pick the destinations you're farming — you'll only be notified when one of them is about to go live (and when it does). Leave all off to be notified for every shift.</div>
+    <div class="btn-row" id="farmButtons"></div>
+    <div class="note">You'll get one alert before the shift and one when the new destination goes live. Heads up: browser notifications only fire while this tab is open (it can be in the background).</div>
+  </div>
+
+  <div class="panel">
+    <h2>Next 7 hours</h2>
+    <table id="schedule"></table>
+  </div>
+
+  <div class="panel">
+    <h2>Loot by Destination</h2>
+    <div id="lootList"></div>
+  </div>
+</div>
+
+<script>
+const ROT = ["Cosmodrome","EDZ","Dreaming City","Throne World","Moon","Europa","Nessus"];
+
+const LOOT = {
+  "Cosmodrome": {
+    set: "Seventh Seraph",
+    b2: ["Rasputin's Wrath", "Kills with area-of-effect damage, Solar abilities, or Seventh Seraph/IKELOS weapons grant Warmind Charges. Each Charge boosts your Weapons and Grenade stats."],
+    b4: ["Rasputin's Reprisal", "With Warmind Charges, defeating powerful enemies or destroying constructs/Tangles triggers a Solar blast that damages enemies and heals allies."],
+    weapons: [["Seventh Seraph Carbine","Auto Rifle · Kinetic"],["Seventh Seraph Officer Revolver","Hand Cannon · Kinetic"],["Seventh Seraph SI-2","Sidearm · Void"],["Seventh Seraph VY-7","SMG · Arc"],["Seventh Seraph CQC-12","Shotgun · Solar"],["Seventh Seraph SAW","Machine Gun · Arc"]]
+  },
+  "EDZ": {
+    set: "Wildwood",
+    b2: ["Watchtower", "Precision kills while aiming down sights grant damage resistance until you stop ADS."],
+    b4: ["Field Expertise", "Precision kills stack bonus reload speed, target acquisition, and damage vs non-bosses. Non-precision weapon kills end the effect early."],
+    weapons: [["Scathelocke","Auto Rifle · Kinetic"],["Battle Scar","Pulse Rifle · Kinetic"],["Parabellum","SMG · Solar"],["Cartesian Coordinate","Fusion Rifle · Solar"],["Last Foray","Sniper Rifle · Solar"],["Nasreddin","Sword · Arc"]]
+  },
+  "Dreaming City": {
+    set: "Reverie Dawn",
+    b2: ["A Wish for Protection", "Taking heavy damage in a short window grants a Protective Wish — enemies have a harder time hitting you, plus faster reloads and flinch resistance."],
+    b4: ["A Wish Fulfilled", "When the Protective Wish expires, it cures you. Rapid final blows end the Wish early."],
+    weapons: [["Waking Vigil","Hand Cannon · Arc"],["Tigerspite","Auto Rifle · Kinetic"],["Vouchsafe","Scout Rifle · Void"],["Twilight Oath","Sniper Rifle · Solar"],["Retold Tale","Shotgun · Void"],["Sleepless","Rocket Launcher · Arc"],["Abide the Return","Sword · Solar"]]
+  },
+  "Throne World": {
+    set: "Veritas",
+    b2: ["Lucent Transmutation", "Finishers or chained powered melee kills generate an Elemental pickup matching your Light subclass."],
+    b4: ["Lucent Tithes", "Finishers on powerful enemies heal you and spawn loyal Void moths."],
+    weapons: [["Come to Pass","Auto Rifle · Arc"],["Empirical Evidence","Sidearm · Kinetic"],["Forensic Nightmare","SMG · Stasis"],["Pointed Inquiry","Scout Rifle · Void"],["Fel Taradiddle","Bow · Kinetic"],["Father's Sins","Sniper Rifle · Void"],["Likely Suspect","Fusion Rifle · Void"],["The Enigma","Glaive · Void"],["Red Herring","Rocket Launcher · Void"],["Tarnation","Grenade Launcher · Arc"]]
+  },
+  "Moon": {
+    set: "Dreambane",
+    b2: ["Nightmarish Power", "Kills on challenging or higher-ranked enemies grant Unstable Essence, boosting your grenade and melee stats."],
+    b4: ["Nightmarish Resilience", "While you hold Unstable Essence, rapid weapon damage or kills heal you and kick off health regen."],
+    weapons: [["Loud Lullaby","Hand Cannon · Stasis"],["Arc Logic","Auto Rifle · Arc"],["Premonition","Pulse Rifle · Void"],["Every Waking Moment","SMG · Void"],["Blasphemer","Shotgun · Kinetic"],["One Small Step","Shotgun · Kinetic"],["Apostate","Sniper Rifle · Arc"],["Tranquility","Sniper Rifle · Kinetic"],["Dream Breaker","Fusion Rifle · Solar"],["Heretic","Rocket Launcher · Arc"],["Love and Death","Grenade Launcher · Solar"],["A Fine Memorial","Machine Gun · Arc"],["Night Terror","Sword · Arc"]]
+  },
+  "Europa": {
+    set: "Crystocrene",
+    b2: ["Resupply", "After a stretch out of combat, your next kill grants bonus ammo progress and drops an Orb of Power."],
+    b4: ["From the Storm", "Staying out of combat slowly builds Frost Armor until you reenter the fight."],
+    weapons: [["High Albedo","Sidearm · Kinetic"],["Arctic Haze","Auto Rifle · Solar"],["Hailing Confusion","Pulse Rifle · Kinetic"],["Biting Winds","Bow · Kinetic"],["Bonechiller","Shotgun · Void"],["Coriolis Force","Fusion Rifle · Void"],["Subzero Salvo","Rocket Launcher · Arc"],["Thermal Erosion","Machine Gun · Solar"]]
+  },
+  "Nessus": {
+    set: "Exodus Down",
+    b2: ["Emergency Electromagnet", "When your shields break, nearby Orbs of Power are pulled straight to you."],
+    b4: ["Repurposed Charge", "Gaining, losing, or spending Armor Charge heals you and grants damage reduction, scaling with the amount of Charge moved."],
+    weapons: [["True Prophecy","Hand Cannon · Kinetic"],["Pluperfect","Auto Rifle · Kinetic",1],["The Deicide","Shotgun · Void"],["Trophy Hunter","Sniper Rifle · Void",1],["Pyroclastic Flow","Rocket Launcher · Solar",1],["Temporal Clause","Machine Gun · Solar",1]]
+  }
+};
+const HOUR = 3600000;
+let offset = 0, calibrated = false, leadMin = 10, farmSet = [], armorOwned = {};
+let notifiedLeadHour = -1, notifiedShiftHour = -1;
+
+const $ = id => document.getElementById(id);
+
+function epochHour(){ return Math.floor(Date.now()/HOUR); }
+function idxAt(eh){ return ((eh + offset) % 7 + 7) % 7; }
+
+// ---- persistence (Claude artifact storage, falls back to localStorage when self-hosted) ----
+const store = {
+  async get(k){
+    try{ if(window.storage){ const r = await window.storage.get(k); return r ? r.value : null; } }catch(e){}
+    try{ return localStorage.getItem(k); }catch(e){ return null; }
+  },
+  async set(k,v){
+    try{ if(window.storage){ await window.storage.set(k,v); return; } }catch(e){}
+    try{ localStorage.setItem(k,v); }catch(e){ console.error('save failed', e); }
+  }
+};
+async function load(){
+  try{
+    const v = await store.get('distortion-settings');
+    if(v){
+      const s = JSON.parse(v);
+      offset = s.offset ?? 0;
+      calibrated = s.calibrated ?? false;
+      leadMin = s.leadMin ?? 10;
+      farmSet = s.farmSet ?? [];
+      armorOwned = s.armorOwned ?? {};
+      $('lead').value = String(leadMin);
+    }
+  }catch(e){ /* first run */ }
+  updateCalUI();
+  updateFarmUI();
+  updateArmorUI();
+}
+async function save(){
+  try{
+    await store.set('distortion-settings', JSON.stringify({offset, calibrated, leadMin, farmSet, armorOwned}));
+  }catch(e){ console.error('save failed', e); }
+}
+
+// ---- calibration ----
+function buildCalButtons(){
+  ROT.forEach((name,i)=>{
+    const b = document.createElement('button');
+    b.textContent = name;
+    b.onclick = ()=>{
+      offset = ((i - (epochHour()%7)) % 7 + 7) % 7;
+      calibrated = true;
+      notifiedLeadHour = notifiedShiftHour = -1;
+      save(); updateCalUI(); render();
+    };
+    b.dataset.i = i;
+    $('calButtons').appendChild(b);
+  });
+}
+function updateCalUI(){
+  const cur = idxAt(epochHour());
+  document.querySelectorAll('#calButtons button').forEach(b=>{
+    b.classList.toggle('selected', calibrated && Number(b.dataset.i)===cur);
+  });
+  const s = $('calStatus');
+  if(calibrated){ s.textContent = 'Calibrated. Re-tap anytime if it drifts.'; s.className='status ok'; }
+  else { s.textContent = 'Not calibrated — schedule below is a guess.'; s.className='status warn'; }
+}
+
+// ---- notifications ----
+$('enableNotif').onclick = async ()=>{
+  if(!('Notification' in window)){ setNotifStatus('This browser doesn\'t support notifications.', 'warn'); return; }
+  const p = await Notification.requestPermission();
+  if(p === 'granted'){
+    setNotifStatus('Notifications on.', 'ok');
+    new Notification('Distortion Tracker', {body:'Notifications enabled. Currently distorted: ' + ROT[idxAt(epochHour())]});
+  } else setNotifStatus('Permission denied — enable in browser site settings.', 'warn');
+};
+$('lead').onchange = e => { leadMin = Number(e.target.value); notifiedLeadHour = -1; save(); };
+function setNotifStatus(msg, cls){ const s=$('notifStatus'); s.textContent=msg; s.className='status '+(cls||''); }
+function notify(title, body){
+  if('Notification' in window && Notification.permission==='granted'){
+    new Notification(title, {body, tag:'distortion-'+title});
+  }
+}
+function wantNotify(destIdx){
+  return farmSet.length === 0 || farmSet.includes(destIdx);
+}
+
+// ---- farm filter ----
+function buildFarmButtons(){
+  ROT.forEach((name,i)=>{
+    const b = document.createElement('button');
+    b.textContent = name;
+    b.dataset.i = i;
+    b.onclick = ()=>{
+      farmSet = farmSet.includes(i) ? farmSet.filter(x=>x!==i) : [...farmSet, i];
+      notifiedLeadHour = notifiedShiftHour = -1;
+      save(); updateFarmUI();
+    };
+    $('farmButtons').appendChild(b);
+  });
+}
+function updateFarmUI(){
+  document.querySelectorAll('#farmButtons button').forEach(b=>{
+    b.classList.toggle('selected', farmSet.includes(Number(b.dataset.i)));
+  });
+}
+
+// ---- ring nodes ----
+function buildNodes(){
+  const g = $('nodes');
+  g.innerHTML = '';
+  for(let i=0;i<7;i++){
+    const a = -90 + i*(360/7);
+    const x = 160 + 140*Math.cos(a*Math.PI/180);
+    const y = 160 + 140*Math.sin(a*Math.PI/180);
+    const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.setAttribute('x', x-5); r.setAttribute('y', y-5);
+    r.setAttribute('width',10); r.setAttribute('height',10);
+    r.setAttribute('transform', `rotate(45 ${x} ${y})`);
+    r.setAttribute('data-node', i);
+    r.setAttribute('fill', '#232c40');
+    g.appendChild(r);
+  }
+}
+function paintNodes(activePos){
+  document.querySelectorAll('#nodes rect').forEach((r,i)=>{
+    if(i===activePos){ r.setAttribute('fill','#ff4655'); r.setAttribute('filter','url(#glow)'); }
+    else { r.setAttribute('fill','#232c40'); r.removeAttribute('filter'); }
+  });
+}
+
+// ---- render loop ----
+const fmt = new Intl.DateTimeFormat([], {hour:'numeric', minute:'2-digit'});
+function render(){
+  const now = Date.now();
+  const eh = epochHour();
+  const cur = idxAt(eh), nxt = idxAt(eh+1);
+  const shiftAt = (eh+1)*HOUR;
+  const msLeft = shiftAt - now;
+
+  $('current').textContent = ROT[cur];
+  $('next').textContent = ROT[nxt];
+  $('nextTime').textContent = 'at ' + fmt.format(new Date(shiftAt));
+  const m = Math.floor(msLeft/60000), s = Math.floor(msLeft%60000/1000);
+  $('timer').textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  $('clock').textContent = new Date().toLocaleTimeString();
+
+  // ring progress (elapsed portion of the hour)
+  const frac = 1 - msLeft/HOUR;
+  $('progress').setAttribute('stroke-dashoffset', String(879.6*(1-frac)));
+  // position 0 = current, walk clockwise
+  paintNodes(0);
+  // rotate node labels so active is always top: simpler — mark node cur%7? Keep node 0 top = current.
+  // Actually rotate ring group so active index sits at top:
+  $('nodes').setAttribute('transform','');
+  document.querySelectorAll('#nodes rect').forEach((r,i)=>{
+    // node i represents destination (cur + i) % 7 — node 0 (top) is always the active one
+  });
+
+  // notifications
+  if(calibrated && msLeft <= leadMin*60000 && notifiedLeadHour !== eh){
+    notifiedLeadHour = eh;
+    if(wantNotify(nxt)) notify('Distortion shifting soon', ROT[nxt]+' goes live in '+leadMin+' min (ending: '+ROT[cur]+')');
+  }
+  if(calibrated && msLeft > HOUR - 5000 && notifiedShiftHour !== eh){
+    notifiedShiftHour = eh;
+    if(wantNotify(cur)) notify('Distortion active: '+ROT[cur], 'Live now for the next hour. Next: '+ROT[nxt]);
+  }
+
+  buildSchedule(eh);
+  updateCalUI();
+  paintLoot(ROT[cur]);
+}
+
+let lastScheduleHour = -1;
+function buildSchedule(eh){
+  if(eh === lastScheduleHour) return;
+  lastScheduleHour = eh;
+  const t = $('schedule');
+  t.innerHTML = '';
+  for(let i=0;i<7;i++){
+    const tr = document.createElement('tr');
+    if(i===0) tr.className = 'active';
+    const start = new Date((eh+i)*HOUR);
+    tr.innerHTML = '<td class="time">'+fmt.format(start)+'</td>'+
+                   '<td><span class="diamond"></span>'+ROT[idxAt(eh+i)]+'</td>';
+    t.appendChild(tr);
+  }
+}
+
+// ---- element + armor slot icons (original stylized glyphs) ----
+const EL_ICONS = {
+  "Kinetic": `<svg class="el-ic" viewBox="0 0 16 16"><rect x="4.5" y="4.5" width="7" height="7" transform="rotate(45 8 8)" fill="none" stroke="#dfe3ec" stroke-width="1.5"/></svg>`,
+  "Solar":   `<svg class="el-ic" viewBox="0 0 16 16"><path d="M8 1.5c1.2 2.4 4 3.6 4 7a4 4 0 0 1-8 0c0-1.6.8-2.6 1.6-3.8C6.4 3.6 7.4 3 8 1.5z" fill="#ff7e21"/><circle cx="8" cy="9.4" r="1.6" fill="#0d1017"/></svg>`,
+  "Arc":     `<svg class="el-ic" viewBox="0 0 16 16"><path d="M9.5 1L3.5 9h4l-1 6 6-8h-4z" fill="#7bc8f5"/></svg>`,
+  "Void":    `<svg class="el-ic" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="#b185df" stroke-width="1.6"/><circle cx="8" cy="8" r="2.4" fill="#b185df"/></svg>`,
+  "Stasis":  `<svg class="el-ic" viewBox="0 0 16 16"><g stroke="#4d7dff" stroke-width="1.5" stroke-linecap="round"><line x1="8" y1="1.5" x2="8" y2="14.5"/><line x1="2.4" y1="4.8" x2="13.6" y2="11.2"/><line x1="13.6" y1="4.8" x2="2.4" y2="11.2"/></g></svg>`,
+  "Strand":  `<svg class="el-ic" viewBox="0 0 16 16"><g stroke="#3be36e" stroke-width="1.5" fill="none" stroke-linecap="round"><path d="M3 13C3 7 8 9 8 3"/><path d="M8 13c0-6 5-4 5-10"/><path d="M3 3c5 0 5 10 10 10" opacity=".6"/></g></svg>`
+};
+const SLOTS = ["Helmet","Arms","Chest","Legs","Class"];
+const SLOT_ICONS = {
+  "Helmet": `<svg viewBox="0 0 24 24"><path d="M4 14a8 8 0 0 1 16 0v4H4z"/><line x1="6" y1="13" x2="18" y2="13"/></svg>`,
+  "Arms":   `<svg viewBox="0 0 24 24"><path d="M8 3h8v10l2 4v4H6v-4l2-4z"/><line x1="8" y1="13" x2="16" y2="13"/></svg>`,
+  "Chest":  `<svg viewBox="0 0 24 24"><path d="M6 4l6-1 6 1 2 6-3 2v9H7v-9l-3-2z"/><line x1="12" y1="3" x2="12" y2="21"/></svg>`,
+  "Legs":   `<svg viewBox="0 0 24 24"><path d="M8 3h8v8l2 9h-5l-1-6-1 6H6l2-9z"/></svg>`,
+  "Class":  `<svg viewBox="0 0 24 24"><path d="M7 3h10v14l-5 4-5-4z"/><line x1="7" y1="9" x2="17" y2="9"/></svg>`
+};
+
+// ---- subclass keyword highlighting ----
+const KW_MAP = [
+  ['kw-void',   /\b(void breach(?:es)?|volatile|suppress(?:ion|ed|es)?|devour|weaken(?:s|ed|ing)?|invisib(?:le|ility)|overshields?|void)\b/gi],
+  ['kw-stasis', /\b(stasis crystals?|frost armor|slow(?:s|ed)?|freeze(?:s)?|frozen|shatter(?:s|ed)?|stasis)\b/gi],
+  ['kw-strand', /\b(woven mail|sever(?:s|ed)?|unravel(?:s|ed|ing)?|suspend(?:s|ed)?|threadlings?|tangles?|strand)\b/gi],
+  ['kw-arc',    /\b(ionic traces?|amplified|blind(?:s|ed|ing)?|jolt(?:s|ed)?|arc)\b/gi],
+  ['kw-solar',  /\b(scorch(?:es|ed)?|ignit(?:e|es|ed|ion|ions)|radiant|restoration|cure(?:s|d)?|firesprites?|solar)\b/gi],
+  ['kw-kinetic',/\b(kinetic)\b/gi],
+];
+function hl(text){
+  let out = text;
+  KW_MAP.forEach(([cls, re])=>{
+    out = out.replace(re, m => `<span class="${cls}">${m}</span>`);
+  });
+  return out;
+}
+function buildLoot(){
+  const wrap = $('lootList');
+  ROT.forEach(name=>{
+    const d = LOOT[name];
+    const item = document.createElement('div');
+    item.className = 'loot-item';
+    item.dataset.dest = name;
+    const wpns = d.weapons.map(w=>{
+      const parts = w[1].split(' · ');
+      const el = parts[1] || 'Kinetic';
+      return `<div class="wpn"><span>${w[0]}${w[2]?'<span class="new">NEW</span>':''}</span><span class="type">${parts[0]} · ${EL_ICONS[el]||''}${hl(el)}</span></div>`;
+    }).join('');
+    const slots = SLOTS.map((s,si)=>`
+      <div class="slot" data-dest="${name}" data-slot="${si}" role="button" tabindex="0" aria-label="${d.set} ${s}">
+        ${SLOT_ICONS[s]}
+        <span class="slot-name">${s}</span>
+        <span class="slot-state">—</span>
+      </div>`).join('');
+    item.innerHTML = `
+      <button class="loot-head"><span>${name}</span><span class="set-name">${d.set} Set</span></button>
+      <div class="loot-body">
+        <div class="bonus"><span class="pc">2PC</span><b>${d.b2[0]}</b> — ${hl(d.b2[1])}</div>
+        <div class="bonus"><span class="pc">4PC</span><b>${d.b4[0]}</b> — ${hl(d.b4[1])}</div>
+        <div class="armor-title">${d.set} Armor — tap pieces as you acquire them</div>
+        <div class="armor-row">${slots}</div>
+        <div class="wpn-title">Weapons</div>
+        ${wpns}
+      </div>`;
+    item.querySelector('.loot-head').onclick = ()=> item.classList.toggle('open');
+    item.querySelectorAll('.slot').forEach(sl=>{
+      const toggle = ()=>{
+        const dst = sl.dataset.dest, si = Number(sl.dataset.slot);
+        if(!armorOwned[dst]) armorOwned[dst] = [false,false,false,false,false];
+        armorOwned[dst][si] = !armorOwned[dst][si];
+        save(); updateArmorUI();
+      };
+      sl.onclick = toggle;
+      sl.onkeydown = e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } };
+    });
+    wrap.appendChild(item);
+  });
+}
+function updateArmorUI(){
+  document.querySelectorAll('.slot').forEach(sl=>{
+    const owned = !!(armorOwned[sl.dataset.dest]?.[Number(sl.dataset.slot)]);
+    sl.classList.toggle('owned', owned);
+    sl.querySelector('.slot-state').textContent = owned ? 'ACQUIRED' : '—';
+  });
+}
+function paintLoot(curName){
+  document.querySelectorAll('.loot-item').forEach(el=>{
+    el.classList.toggle('live', el.dataset.dest === curName);
+  });
+}
+
+buildCalButtons();
+buildFarmButtons();
+buildLoot();
+buildNodes();
+load().then(()=>{ render(); setInterval(render, 1000); });
+</script>
